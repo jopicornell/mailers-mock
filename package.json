@@ -1,7 +1,7 @@
 {
-  "name": "sendgrid-mock",
-  "version": "1.12.0",
-  "description": "SendGrid API mock",
+  "name": "mailers-mock",
+  "version": "1.0.0",
+  "description": "Mailers (Sendgrid v2/v3, Mailpace API mock",
   "engines": {
     "node": ">=16",
     "npm": ">=8"
@@ -24,7 +24,7 @@
   },
   "author": "janjaali",
   "repository": {
-    "url": "https://github.com/janjaali/sendGrid-mock",
+    "url": "https://github.com/jopicornell/mailers-mock",
     "type": "git"
   },
   "license": "MIT",

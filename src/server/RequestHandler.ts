@@ -84,6 +84,101 @@ const RequestHandler = (app: Express, apiAuthenticationKey: any, mailHandler: Ma
   // increased limit for the request body size thus allowing larger mails.
   app.use(bodyParser.json({ limit: '5mb' }));
 
+  app.post('/api/mail.send.json', express.urlencoded({ extended: true }), (req: Request, res: Response) => {
+    const reqApiKey = req.headers.authorization;
+
+    if (reqApiKey === `Bearer ${apiAuthenticationKey}`) {
+      const messageId = crypto.randomUUID();
+      console.log(req.body);
+      const mailToAdd: Mail = {
+        from: {
+          name: req.body.fromname,
+          email: req.body.from
+        },
+        subject: req.body.subject,
+        content: [{
+          type: 'text/html',
+          value: req.body.html
+        }],
+        datetime: new Date(),
+        personalizations: [{
+          to: [{
+            name: req.body.toname,
+            email: req.body.to
+          }],
+          cc: [{
+            name: req.body.ccname,
+            email: req.body.cc
+          }],
+          bcc: [{
+            name: req.body.bccname,
+            email: req.body.bcc
+          }]
+        }]
+      }
+
+      try {
+        // Simulate adding mail - this should map to your actual mail processing logic
+        mailHandler.addMail(mailToAdd, messageId);
+
+        res.status(200).header({ 'X-Message-ID': messageId }).send();
+      } catch (error) {
+        // @ts-ignore
+        res.status(500).send({ error: 'Internal Server Error', details: error.message });
+      }
+    } else {
+      res.status(403).send({
+        errors: [{
+          message: 'Failed authentication',
+          field: 'authorization',
+          help: 'check used API key for authentication',
+        }],
+        id: 'forbidden',
+      });
+    }
+  });
+
+  app.post('/api/v1/send', express.urlencoded({ extended: true }), (req: Request, res: Response) => {
+    const reqApiKey = req.headers['mailpace-server-token'];
+
+    if (reqApiKey === apiAuthenticationKey) {
+      const messageId = crypto.randomUUID();
+
+      const mailToAdd: Mail = {
+        from: {
+          name: req.body.fromname,
+          email: req.body.from
+        },
+        subject: req.body.subject,
+        content: [{
+          type: 'text/html',
+          value: req.body.htmlbody
+        }],
+        datetime: new Date(),
+        personalizations: [{
+          to: [{ email: req.body.to }],
+          bcc: req.body.bcc ? [{ email: req.body.bcc }] : undefined,
+        }]
+      };
+
+      try {
+        mailHandler.addMail(mailToAdd, messageId);
+        res.status(200).header({ 'X-Message-ID': messageId }).send();
+      } catch (error) {
+        res.status(500).send({ error: 'Internal Server Error', details: (error as Error).message });
+      }
+    } else {
+      res.status(403).send({
+        errors: [{
+          message: 'Failed authentication',
+          field: 'MailPace-Server-Token',
+          help: 'check used API key for authentication',
+        }],
+        id: 'forbidden',
+      });
+    }
+  });
+
   app.post(
     '/v3/mail/send',
     // @ts-ignore

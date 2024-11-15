@@ -1,0 +1,12 @@
+NOTICE
+
+This product includes software developed by janjaali and Contributors.
+
+Modifications and additional functionality have been contributed by Joan Picornell(jopicornell).
+
+Significant modifications include:
+- Added TypeScript support to improve code quality and developer experience.
+- Integrated support for Sendgrid V2 API for an old version of Sendgrid.
+- Added support for Mailpace to provide additional email service options.
+
+This product is distributed under the MIT License. See LICENSE file for details.

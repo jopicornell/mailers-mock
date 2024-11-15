@@ -1,6 +1,10 @@
-# SendGrid-Mock
 
-SendGrid-Mock serves as a simple server mocking the sendgrid-apis for development purposes.
+
+# Mailers-Mock
+
+Mailers-Mock serves as a simple server mocking apis of mailers like Sendgrid, Mailpace (and open to others) for development purposes.
+
+Forked from https://github.com/janjaali/sendGrid-mock to add support for other mailers and TS support.
 
 ![./assets/screenshot_1.8.0.png](./assets/screenshot_1.8.0.png)
 
@@ -8,7 +12,9 @@ SendGrid-Mock serves as a simple server mocking the sendgrid-apis for developmen
 
 ### HTTP API
 
-* Send mails `POST /v3/mail/send`
+* Send mails Sendgrid v3 `POST /v3/mail/send`
+* Send mails Sendgrid v2 `POST /api/mail.send.json`
+* Send mails Mailpace `POST /api/v1/send`
 
 * Retrieve sent mails `GET /api/mails`
   * Filter capabilities are included and can be combined:
@@ -48,10 +54,10 @@ SendGrid-Mock serves as a simple server mocking the sendgrid-apis for developmen
 
 ## Dockerized
 
-The SendGrid-Mock server and the UI are both contained in the same docker-image which you can pull from [Docker Hub](https://cloud.docker.com/u/ghashange/repository/docker/ghashange/sendgrid-mock) and start it via:
+The MAilers-Mock server and the UI are both contained in the same docker-image which you can pull from [ghcr.io](https://ghcr.io/jopicornell/mailers-mock) and start it via:
 
 ```shell
-docker run -it -p 3000:3000 -e "API_KEY=sendgrid-api-key" ghashange/sendgrid-mock:1.12.0
+docker run -it -p 3000:3000 -e "API_KEY=sendgrid-api-key" ghcr.io/jopicornell/mailers-mock:latest
 ```
 
 Some prepared HTTP calls can be found [here](./http-calls).
@@ -60,10 +66,10 @@ The UI can be accessed at <http://localhost:3000>.
 
 ### SSL support
 
-SendGrid-Mock also supports SSL using [Let's Encrypt](https://letsencrypt.org/). To enable SSL, run it as follows:
+Mailers-Mock also supports SSL using [Let's Encrypt](https://letsencrypt.org/). To enable SSL, run it as follows:
 
 ```shell
-docker run -it -p 3000:3000 -e "API_KEY=sendgrid-api-key" -e "CERT_DOMAINNAMES=[your-domain-name]" -e "CERT_EMAIL=[your-email-address]" ghashange/sendgrid-mock:1.12.0
+docker run -it -p 3000:3000 -e "API_KEY=sendgrid-api-key" -e "CERT_DOMAINNAMES=[your-domain-name]" -e "CERT_EMAIL=[your-email-address]" ghcr.io/jopicornell/mailers-mock:latest
 ```
 
 ## Development
@@ -76,7 +82,7 @@ The UI can be accessed at <http://localhost:3000>.
 
 ### Build
 
-Create docker image with `docker build -t ghashange/sendgrid-mock:1.12.0 .`.
+Create docker image with `docker build -t ghcr.io/jopicornell/mailers-mock:latest .`.
 
 ### Release
 
@@ -86,4 +92,4 @@ Create docker image with `docker build -t ghashange/sendgrid-mock:1.12.0 .`.
 
 3. Merge PR
 
-4. Create GitHub release and update [Docker Hub description](https://hub.docker.com/repository/docker/ghashange/sendgrid-mock)
+4. Create GitHub release and update [Docker Hub description](https://hub.docker.com/repository/docker/jopicornell/mailers-mock)

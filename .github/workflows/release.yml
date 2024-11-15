@@ -11,7 +11,7 @@ jobs:
     if: |
       (github.event.pull_request.merged == true &&
       github.event.pull_request.base.ref == 'master') ||
-      github.actor == 'janjaali'
+      github.actor == 'jopicornell'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -41,14 +41,17 @@ jobs:
           create_annotated_tag: true
           tag_prefix: v
 
-      - name: Login to DockerHub
+      - name: Login to ghcr.io
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker images
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: ghashange/sendgrid-mock:${{ env.RELEASE_VERSION }}
+          tags: |
+            ghcr.io/${{ github.repository }}/sendgrid-mock:${{ env.RELEASE_VERSION }}
+            ghcr.io/${{ github.repository }}/sendgrid-mock:latest
