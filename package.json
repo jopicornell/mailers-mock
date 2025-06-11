@@ -1,6 +1,6 @@
 {
   "name": "mailers-mock",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "Mailers (Sendgrid v2/v3, Mailpace API mock",
   "engines": {
     "node": ">=16",
