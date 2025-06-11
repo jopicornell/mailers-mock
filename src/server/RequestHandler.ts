@@ -80,11 +80,12 @@ const RequestHandler = (app: Express, apiAuthenticationKey: any, mailHandler: Ma
 
   const { validate } = new Validator({});
 
-  // Using application/json parser for parsing the request body with a slightly
-  // increased limit for the request body size thus allowing larger mails.
-  app.use(bodyParser.json({ limit: '5mb' }));
+  const bodyParserLimitMb = process.env.BODY_PARSER_LIMIT_MB ? parseInt(process.env.BODY_PARSER_LIMIT_MB, 10) : 5;
+  const bodyParserLimit = `${bodyParserLimitMb}mb`;
 
-  app.post('/api/mail.send.json', express.urlencoded({ extended: true }), (req: Request, res: Response) => {
+  app.use(bodyParser.json({ limit: bodyParserLimit }));
+
+  app.post('/api/mail.send.json', express.urlencoded({ extended: true, limit: bodyParserLimit }), (req: Request, res: Response) => {
     const reqApiKey = req.headers.authorization;
 
     if (reqApiKey === `Bearer ${apiAuthenticationKey}`) {
@@ -138,7 +139,7 @@ const RequestHandler = (app: Express, apiAuthenticationKey: any, mailHandler: Ma
     }
   });
 
-  app.post('/api/v1/send', express.urlencoded({ extended: true }), (req: Request, res: Response) => {
+  app.post('/api/v1/send', express.urlencoded({ extended: true, limit: bodyParserLimit }), (req: Request, res: Response) => {
     const reqApiKey = req.headers['mailpace-server-token'];
 
     if (reqApiKey === apiAuthenticationKey) {

@@ -50,6 +50,8 @@ Forked from https://github.com/janjaali/sendGrid-mock to add support for other m
 
 * By default, all emails older than 24 hours will be deleted. This can be configured using environment variable `MAIL_HISTORY_DURATION` which uses [ISO-8601 Duration format](https://en.wikipedia.org/wiki/ISO_8601#Durations) such as *'PT24H'*.
 
+* Request body size limit: Configure the maximum request body size for email content by specifying environment variable `BODY_PARSER_LIMIT_MB` in megabytes (default: `5`). This applies to both JSON and URL-encoded request bodies.
+
 * Event support: Add basic [event](https://www.twilio.com/docs/sendgrid/for-developers/tracking-events/event#events) support by specifying the environment variable `EVENT_DELIVERY_URL`. When set, [delivered](https://www.twilio.com/docs/sendgrid/for-developers/tracking-events/event#delivered) events will be sent to the specified webhook URL when an email is sent.
 
 ## Dockerized
