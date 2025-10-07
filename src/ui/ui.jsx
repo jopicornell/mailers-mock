@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import Mails from './mails/Mails';
+import Mails from './mails/Mails.jsx';
 
 ReactDOM.render(
   <Mails />,
