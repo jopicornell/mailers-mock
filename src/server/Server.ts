@@ -1,7 +1,6 @@
 import { loggerFactory } from './logger/log4js.ts';
 import { setupExpressApp } from './ExpressApp.ts';
 import MailHandler from './handler/MailHandler.ts';
-import asHttpsServer from './ssl/index.ts';
 
 const logger = loggerFactory('Server');
 
@@ -38,23 +37,7 @@ const app = setupExpressApp(
   rateLimitConfiguration,
 );
 
-const enableSsl = process.env.CERT_DOMAINNAMES && process.env.CERT_EMAIL ? true : false;
+const serverPort = 3000;
+app.listen(serverPort);
 
-if (enableSsl) {
-
-  logger.info('Starting send-grid mock with letsencrypt.org integration (use https)!');
-
-  const sslRateLimitConfiguration = {
-    enabled: process.env.SSL_RATE_LIMIT_ENABLED === 'true',
-    windowInMs: process.env.SSL_RATE_LIMIT_WINDOW_IN_MS ? process.env.SSL_RATE_LIMIT_WINDOW_IN_MS : 60000,
-    maxRequests: process.env.SSL_RATE_LIMIT_MAX_REQUESTS ? process.env.SSL_RATE_LIMIT_MAX_REQUESTS : 100,
-  };
-
-  asHttpsServer(app, sslRateLimitConfiguration);
-} else {
-
-  const serverPort = 3000;
-  app.listen(serverPort);
-
-  logger.info(`Started sendgrid-mock on port ${serverPort}!`);
-}
+logger.info(`Started sendgrid-mock on port ${serverPort}!`);
