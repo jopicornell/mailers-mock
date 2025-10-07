@@ -1,4 +1,4 @@
-FROM node:22-alpine AS node
+FROM node:24-alpine AS node
 
 # Build stage
 FROM node AS builder
@@ -10,7 +10,7 @@ ENV DOCKER_BUILD="true"
 # NOTE: if you need to change this, change the $CERT_WEBROOT_PATH env
 WORKDIR /app
 
-RUN apk add --no-cache python3 make g++
+# RUN apk add --no-cache python3 make g++
 
 ######################################################################################
 # Add your own Dockerfile entries here
@@ -22,21 +22,15 @@ RUN npm run build
 
 
 FROM node
-# Update the system
-RUN apk --no-cache -U upgrade
-# adds the packages certbot and tini
-RUN apk add --no-cache certbot tini python3 make g++
-ENTRYPOINT ["/sbin/tini", "--"]
 
-# copy and chmod the shell script which will initiate the webroot
-COPY letsencrypt_webroot.sh /
-RUN chmod +x /letsencrypt_webroot.sh
+RUN apk add --no-cache tini
+ENTRYPOINT ["/sbin/tini", "--"]
 
 WORKDIR /usr/src/server
 # Copy package.json and package-lock.json
 COPY package*.json ./
 # Install only production dependencies
-RUN npm i
+RUN npm i --production
 # Copy transpiled js from builder stage into the final image
 COPY --from=builder /app/dist ./dist
 # Copy src/server into final image
