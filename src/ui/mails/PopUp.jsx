@@ -68,18 +68,6 @@ const PopUp = (props) => {
     'text/html': HtmlContent,
   };
 
-  const renderCloseButton = () => {
-    return (
-      <span
-        className="close"
-        style={{ float: 'right', fontSize: '50px', marginRight: '20px' }}
-        onClick={props.hide}
-      >
-        &times;
-      </span>
-    );
-  };
-
   const renderContent = (type, content, mailContext) => {
     const renderer = contentRenderer[type];
 
@@ -116,15 +104,28 @@ const PopUp = (props) => {
     <div className="modal">
       <div className="modal_content">
 
-        {renderCloseButton()}
+        <div className="modal_header">
+          <h1 className="modal_subject" title={props.currentEmail.subject}>
+            {props.currentEmail.subject || '(No Subject)'}
+          </h1>
+          <button
+            className="modal_close"
+            onClick={props.hide}
+            aria-label="Close"
+          >
+            &times;
+          </button>
+        </div>
 
-        {props.currentEmail.template_id ?
-          TemplateContent(
-            props.currentEmail.template_id,
-            props.currentEmail.personalizations
-          ) :
-          renderDisplayContent(props.currentEmail.displayContent, props.selectedEmailType)
-        }
+        <div className="modal_body">
+          {props.currentEmail.template_id ?
+            TemplateContent(
+              props.currentEmail.template_id,
+              props.currentEmail.personalizations
+            ) :
+            renderDisplayContent(props.currentEmail.displayContent, props.selectedEmailType)
+          }
+        </div>
 
       </div>
     </div>
