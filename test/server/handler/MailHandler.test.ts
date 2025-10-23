@@ -29,6 +29,16 @@ const testMail: Mail = {
   'categories': ['important']
 };
 
+// Helper function to check if mails match expected values (ignoring the id field)
+const expectMailsToMatch = (actual: Mail[], expected: Mail[]) => {
+  expect(actual).toHaveLength(expected.length);
+  actual.forEach((mail, index) => {
+    expect(mail).toMatchObject(expected[index]);
+    expect(mail.id).toBeDefined();
+    expect(typeof mail.id).toBe('string');
+  });
+};
+
 describe('MailHandler', () => {
 
   describe('add mails', () => {
@@ -43,7 +53,10 @@ describe('MailHandler', () => {
 
       const addedMails = sut.getMails();
 
-      expect(addedMails).toStrictEqual([{...testMail, datetime: addMailDatetime}]);
+      expect(addedMails).toHaveLength(1);
+      expect(addedMails[0]).toMatchObject({...testMail, datetime: addMailDatetime});
+      expect(addedMails[0].id).toBeDefined();
+      expect(typeof addedMails[0].id).toBe('string');
     });
 
     test('add mails', () => {
@@ -72,9 +85,7 @@ describe('MailHandler', () => {
 
         const remainingMails = sut.getMails();
 
-        expect(remainingMails).toStrictEqual(
-          [{...testMail, datetime: secondMailDatetime}]
-        );
+        expectMailsToMatch(remainingMails, [{...testMail, datetime: secondMailDatetime}]);
       });
 
       test('if configured, after configured duration', () => {
@@ -89,9 +100,7 @@ describe('MailHandler', () => {
 
         const remainingMails = sut.getMails();
 
-        expect(remainingMails).toStrictEqual(
-          [{...testMail, datetime: secondMailDatetime}]
-        );
+        expectMailsToMatch(remainingMails, [{...testMail, datetime: secondMailDatetime}]);
       });
     });
   });
@@ -120,7 +129,7 @@ describe('MailHandler', () => {
 
       const receivedMails = sut.getMails();
 
-      expect(receivedMails).toStrictEqual([
+      expectMailsToMatch(receivedMails, [
         {...testMail, datetime: mailAddingDateTime},
         {...testMail, datetime: mailAddingDateTime},
         {...testMail, datetime: mailAddingDateTime},
@@ -156,14 +165,10 @@ describe('MailHandler', () => {
         expect(mailsReceivedInsufficientFilter).toStrictEqual([]);
 
         const mailsReceivedNonExactMatch= sut.getMails({to: '%sonic%'});
-        expect(mailsReceivedNonExactMatch).toStrictEqual(
-          [{...mail, datetime: addedMailDateTime}]
-        );
+        expectMailsToMatch(mailsReceivedNonExactMatch, [{...mail, datetime: addedMailDateTime}]);
 
         const mailsReceivedExactMatch= sut.getMails({to: 'sonic@hedgehog.com'});
-        expect(mailsReceivedExactMatch).toStrictEqual(
-          [{...mail, datetime: addedMailDateTime}]
-        );
+        expectMailsToMatch(mailsReceivedExactMatch, [{...mail, datetime: addedMailDateTime}]);
       });
 
       test('filter mails sent with given subject', () => {
@@ -193,14 +198,10 @@ describe('MailHandler', () => {
         expect(mailsReceivedInsufficientFilter).toStrictEqual([]);
 
         const mailsReceivedNonExactMatch= sut.getMails({subject: '%like%'});
-        expect(mailsReceivedNonExactMatch).toStrictEqual(
-          [{...mail, datetime: addedMailDateTime}]
-        );
+        expectMailsToMatch(mailsReceivedNonExactMatch, [{...mail, datetime: addedMailDateTime}]);
 
         const mailsReceivedExactMatch= sut.getMails({subject: 'like the wind'});
-        expect(mailsReceivedExactMatch).toStrictEqual(
-          [{...mail, datetime: addedMailDateTime}]
-        );
+        expectMailsToMatch(mailsReceivedExactMatch, [{...mail, datetime: addedMailDateTime}]);
       });
 
       test('filter mails sent after a given point in time', () => {
@@ -233,9 +234,7 @@ describe('MailHandler', () => {
         expect(mailsReceivedInsufficientFilter).toStrictEqual([]);
 
         const mailsReceivedExactMatch = sut.getMails({dateTimeSince: '2020-01-01T11:59:59Z'});
-        expect(mailsReceivedExactMatch).toStrictEqual(
-          [{...mail, datetime: addedMailDateTime}]
-        );
+        expectMailsToMatch(mailsReceivedExactMatch, [{...mail, datetime: addedMailDateTime}]);
       });
 
       test('filter mails by multiple applied filter', () => {
@@ -273,13 +272,11 @@ describe('MailHandler', () => {
           dateTimeSince: '2020-01-02'
         })).toStrictEqual([]);
 
-        expect(sut.getMails({
+        expectMailsToMatch(sut.getMails({
           to: '%sonic%',
           subject: 'like the wind',
           dateTimeSince: '2019-12-31'
-        })).toStrictEqual([
-          {...mail, datetime: addedMailDateTime}
-        ]);
+        }), [{...mail, datetime: addedMailDateTime}]);
       });
     });
 
@@ -298,9 +295,7 @@ describe('MailHandler', () => {
 
         const pagedMails = sut.getMails({}, {pageSize: 1});
 
-        expect(pagedMails).toStrictEqual([
-          {...testMail, subject: '3', datetime: addedMailDateTime},
-        ]);
+        expectMailsToMatch(pagedMails, [{...testMail, subject: '3', datetime: addedMailDateTime}]);
       });
 
       test('page according to given page', () => {
@@ -316,9 +311,7 @@ describe('MailHandler', () => {
 
         const pagedMails = sut.getMails({}, {pageSize: 1, page: 3});
 
-        expect(pagedMails).toStrictEqual([
-          {...testMail, subject: '1', datetime: addedMailDateTime},
-        ]);
+        expectMailsToMatch(pagedMails, [{...testMail, subject: '1', datetime: addedMailDateTime}]);
       });
     });
 
@@ -355,9 +348,7 @@ describe('MailHandler', () => {
           page: 2
         });
 
-      expect(filteredAndPagedMails).toStrictEqual([
-        {...mail, subject: '1', datetime: addedMailDateTime},
-      ]);
+      expectMailsToMatch(filteredAndPagedMails, [{...mail, subject: '1', datetime: addedMailDateTime}]);
     });
   });
 
@@ -405,9 +396,51 @@ describe('MailHandler', () => {
 
       const remainingMails = sut.getMails();
 
-      expect(remainingMails).toStrictEqual([
-        {...testMail, datetime: addedMailDateTime},
-      ]);
+      expectMailsToMatch(remainingMails, [{...testMail, datetime: addedMailDateTime}]);
+    });
+  });
+
+  describe('delete mail by id', () => {
+
+    test('delete existing mail by id returns true', () => {
+      const sut = new MailHandler();
+
+      const addedMailDateTime = new Date('2020-01-01');
+      withMockedDate(addedMailDateTime, () => {
+        sut.addMail(testMail);
+        sut.addMail({...testMail, subject: 'second mail'});
+      });
+
+      const mails = sut.getMails();
+      expect(mails).toHaveLength(2);
+
+      const mailIdToDelete = mails[0].id;
+      const deleted = sut.deleteMailById(mailIdToDelete!);
+
+      expect(deleted).toBe(true);
+      const remainingMails = sut.getMails();
+      expect(remainingMails).toHaveLength(1);
+      expect(remainingMails[0].id).not.toBe(mailIdToDelete);
+    });
+
+    test('delete non-existing mail by id returns false', () => {
+      const sut = new MailHandler();
+
+      sut.addMail(testMail);
+
+      const deleted = sut.deleteMailById('non-existing-id');
+
+      expect(deleted).toBe(false);
+      expect(sut.getMails()).toHaveLength(1);
+    });
+
+    test('delete mail from empty list returns false', () => {
+      const sut = new MailHandler();
+
+      const deleted = sut.deleteMailById('any-id');
+
+      expect(deleted).toBe(false);
+      expect(sut.getMails()).toHaveLength(0);
     });
   });
 

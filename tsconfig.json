@@ -6,7 +6,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
-    "jsx": "react",
+    "jsx": "react-jsx",
     "allowJs": true,
     "preserveSymlinks": false,
     "resolveJsonModule": true,

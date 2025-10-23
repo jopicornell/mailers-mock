@@ -1,13 +1,15 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react({
-      jsxRuntime: 'classic', // Use classic JSX transform for React 16
+      jsxRuntime: 'automatic', // Use automatic JSX transform for React 19
     }),
+    tailwindcss(),
   ],
   root: 'src/ui',
   publicDir: '../../public',

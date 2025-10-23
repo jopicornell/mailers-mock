@@ -5,9 +5,10 @@ import { Mail, MailPersonalization } from '@/types/Mail.ts';
 
 const logger = loggerFactory('MailHandler');
 
-const mailWithTimestamp = (mail: Mail) => {
+const mailWithTimestampAndId = (mail: Mail) => {
   const now = new Date();
-  return { datetime: now, ...mail };
+  const id = crypto.randomUUID();
+  return { id, datetime: now, ...mail };
 };
 
 const formatBytes = (bytes: number, decimals = 2) => {
@@ -125,7 +126,7 @@ class MailHandler {
           () => true,
     ];
 
-    const paginationSize = paginationCriteria?.pageSize || 20;
+    const paginationSize = paginationCriteria?.pageSize || 100;
     const paginationStart = paginationCriteria?.page ?
       (paginationCriteria.page - 1) * paginationSize :
       0 ;
@@ -137,7 +138,7 @@ class MailHandler {
 
   addMail(mail: Mail, messageId = crypto.randomUUID()) {
 
-    this.#mails = [mailWithTimestamp(mail), ...this.#mails];
+    this.#mails = [mailWithTimestampAndId(mail), ...this.#mails];
 
     const maxRetentionTime = Date.now() - (this.#mailRetentionDurationInSeconds * 1000);
     this.#mails = this.#mails.filter(mail => {
@@ -197,6 +198,18 @@ class MailHandler {
     ];
 
     this.#mails = this.#mails.filter(mail => !filters.some(filter => filter(mail)));
+  }
+
+  deleteMailById(id: string): boolean {
+    const initialLength = this.#mails.length;
+    this.#mails = this.#mails.filter(mail => mail.id !== id);
+    const deleted = this.#mails.length < initialLength;
+
+    if (deleted) {
+      logMemoryUsage(this.#mails);
+    }
+
+    return deleted;
   }
 }
 

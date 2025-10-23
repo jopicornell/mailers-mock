@@ -502,4 +502,57 @@ describe('App', () => {
       });
     });
   });
+
+  describe('DELETE /api/mails/:id', () => {
+
+    test('delete mail by id returns 200 when mail exists', async () => {
+      const mailHandlerStub = sinon.createStubInstance(MailHandler);
+      mailHandlerStub.deleteMailById.withArgs('test-mail-id').returns(true);
+
+      const sut = setupExpressApp(mailHandlerStub, { enabled: false }, undefined, rateLimitConfiguration);
+
+      const response = await request(sut).delete('/api/mails/test-mail-id');
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body).toEqual({ success: true, message: 'Email deleted successfully' });
+      expect(mailHandlerStub.deleteMailById.calledOnceWith('test-mail-id')).toBe(true);
+    });
+
+    test('delete mail by id returns 404 when mail does not exist', async () => {
+      const mailHandlerStub = sinon.createStubInstance(MailHandler);
+      mailHandlerStub.deleteMailById.withArgs('non-existing-id').returns(false);
+
+      const sut = setupExpressApp(mailHandlerStub, { enabled: false }, undefined, rateLimitConfiguration);
+
+      const response = await request(sut).delete('/api/mails/non-existing-id');
+
+      expect(response.statusCode).toBe(404);
+      expect(response.body).toEqual({ error: 'Email not found' });
+      expect(mailHandlerStub.deleteMailById.calledOnceWith('non-existing-id')).toBe(true);
+    });
+
+    describe('when authentication enabled', () => {
+      test('basic auth does not apply to api endpoints', async () => {
+        const mailHandlerStub = sinon.createStubInstance(MailHandler);
+        mailHandlerStub.deleteMailById.returns(true);
+
+        const sut = setupExpressApp(
+          mailHandlerStub,
+          {enabled: true, users: {sonic: 'the password'}},
+          undefined,
+          rateLimitConfiguration
+        );
+
+        const response = await request(sut)
+          .delete('/api/mails/test-id')
+          .auth('shadow', 'not the password');
+
+        const responseNoAuth = await request(sut)
+          .delete('/api/mails/test-id');
+
+        expect(response.statusCode).toBe(200);
+        expect(responseNoAuth.statusCode).toBe(200);
+      });
+    });
+  });
 });

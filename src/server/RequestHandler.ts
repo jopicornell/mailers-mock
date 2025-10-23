@@ -227,6 +227,23 @@ const RequestHandler = (app: Express, apiAuthenticationKey: any, mailHandler: Ma
     res.send(mails);
   });
 
+  app.delete('/api/mails/:id', (req, res) => {
+    const { id } = req.params;
+
+    if (!id) {
+      res.status(400).send({ error: 'Email ID is required' });
+      return;
+    }
+
+    const deleted = mailHandler.deleteMailById(id);
+
+    if (deleted) {
+      res.status(200).send({ success: true, message: 'Email deleted successfully' });
+    } else {
+      res.status(404).send({ error: 'Email not found' });
+    }
+  });
+
   app.delete('/api/mails', (req, res) => {
 
     const filterCriteria = {

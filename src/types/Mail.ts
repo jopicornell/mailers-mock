@@ -22,6 +22,18 @@ export interface MailPersonalization {
   custom_args?: any;
 }
 
+export interface MailAttachment {
+  content_id?: string;
+  disposition?: string;
+  type?: string;
+  content?: string;
+}
+
+export interface MailDisplayContent {
+  type: string;
+  value: string;
+}
+
 export interface Mail {
   custom_args?: any;
   categories?: any;
@@ -39,4 +51,7 @@ export interface Mail {
   body?: string;
   datetime?: Date;
   personalizations?: Array<MailPersonalization>;
+  template_id?: string;
+  attachments?: Array<MailAttachment>;
+  displayContent?: Array<MailDisplayContent>;
 }
