@@ -155,5 +155,5 @@ const PopUp = (props: PopUpProps) => {
   );
 };
 
-export default PopUp;
+export default React.memo(PopUp);
 

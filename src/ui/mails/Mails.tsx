@@ -8,7 +8,7 @@ import {
   ColumnDef,
 } from '@tanstack/react-table';
 import * as ContextMenu from '@radix-ui/react-context-menu';
-import { Mail } from '@/types/Mail';
+import { Mail, MailPersonalization } from '@/types/Mail';
 import PopUp from './PopUp';
 
 interface MailsState {
@@ -78,7 +78,12 @@ const Mails = () => {
         return data;
       })
       .then(mails => {
-        setState(prev => ({ ...prev, mails }));
+        setState(prev => {
+          if (JSON.stringify(prev.mails) === JSON.stringify(mails)) {
+            return prev;
+          }
+          return { ...prev, mails };
+        });
       });
   }, [state.subject, state.to, state.dateTimeSince]);
 
@@ -124,7 +129,7 @@ const Mails = () => {
 
       // Prevent default scrolling behavior
       event.preventDefault();
-      
+
       // Find current email index
       const currentIndex = state.mails.findIndex(
         mail => mail.id === state.currentEmail?.id
@@ -273,13 +278,13 @@ const Mails = () => {
           return (
             <>
               {personalizations
-                ?.filter(value => !!value.to)
-                .map(value => value.to)
-                .map((tos, index) => (
+                ?.filter((value: MailPersonalization) => !!value.to)
+                .map((value: MailPersonalization) => value.to)
+                .map((tos: { name?: string; email: string }[] | undefined, index: number) => (
                   <div key={index}>
                     {tos && tos.length > 1
                       ? <ul>
-                        {tos.map((to, subIndex) => (<li key={subIndex}>{to.email}</li>))}
+                        {tos.map((to: { name?: string; email: string }, subIndex: number) => (<li key={subIndex}>{to.email}</li>))}
                       </ul>
                       : <span>{tos?.[0]?.email}</span>
                     }
@@ -397,18 +402,16 @@ const Mails = () => {
                       <ContextMenu.Trigger asChild>
                         <tr
                           onClick={() => !isDeleting && setCurrentEmail(row.original)}
-                          className={`hover:bg-gray-50 cursor-pointer transition-colors ${
-                            isDeleting ? 'opacity-50 pointer-events-none' : ''
-                          }`}
+                          className={`hover:bg-gray-50 cursor-pointer transition-colors ${isDeleting ? 'opacity-50 pointer-events-none' : ''
+                            }`}
                         >
                           {row.getVisibleCells().map(cell => (
                             <td
                               key={cell.id}
-                              className={`px-4 py-3 text-sm text-gray-900 ${
-                                cell.column.id === 'subject' || cell.column.id === 'actions'
-                                  ? 'whitespace-normal'
-                                  : 'whitespace-nowrap'
-                              }`}
+                              className={`px-4 py-3 text-sm text-gray-900 ${cell.column.id === 'subject' || cell.column.id === 'actions'
+                                ? 'whitespace-normal'
+                                : 'whitespace-nowrap'
+                                }`}
                             >
                               {flexRender(cell.column.columnDef.cell, cell.getContext())}
                             </td>
