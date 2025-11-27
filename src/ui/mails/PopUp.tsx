@@ -24,8 +24,10 @@ const HtmlContent = (content: string, mailContext: Mail) => {
     }, content);
 
   return (
-    <div
-      dangerouslySetInnerHTML={{ __html: contentWithAttachedAttachments }}
+    <iframe
+      className="w-full h-full min-h-[500px] border-0"
+      srcDoc={contentWithAttachedAttachments}
+      sandbox="allow-same-origin allow-scripts allow-popups"
     />
   );
 };
