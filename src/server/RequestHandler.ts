@@ -3,9 +3,12 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import {Validator, ValidationError} from 'express-json-validator-middleware';
 import MailHandler from '@/server/handler/MailHandler.ts';
+import { loggerFactory } from './logger/log4js.ts';
 
 import { JSONSchema7 } from 'json-schema';
 import { Mail } from '@/types/Mail.ts';
+
+const logger = loggerFactory('RequestHandler');
 
 const jsonSchema: Record<string, JSONSchema7> = {
   v3MailSend: {
@@ -64,6 +67,19 @@ const jsonSchema: Record<string, JSONSchema7> = {
       },
       custom_args: {
         type: ['object', 'null']
+      },
+      attachments: {
+        type: ['array', 'null'],
+        items: {
+          type: 'object',
+          properties: {
+            content: { type: 'string' },
+            type: { type: 'string' },
+            filename: { type: 'string' },
+            disposition: { type: 'string' },
+            content_id: { type: 'string' }
+          }
+        }
       }
     }
   }
@@ -90,7 +106,7 @@ const RequestHandler = (app: Express, apiAuthenticationKey: any, mailHandler: Ma
 
     if (reqApiKey === `Bearer ${apiAuthenticationKey}`) {
       const messageId = crypto.randomUUID();
-      console.log(req.body);
+      logger.debug('Received mail.send.json request', { body: req.body });
       const mailToAdd: Mail = {
         from: {
           name: req.body.fromname,
@@ -121,11 +137,11 @@ const RequestHandler = (app: Express, apiAuthenticationKey: any, mailHandler: Ma
       try {
         // Simulate adding mail - this should map to your actual mail processing logic
         mailHandler.addMail(mailToAdd, messageId);
-
+        logger.info(`Mail added via mail.send.json endpoint`, { messageId, to: req.body.to });
         res.status(200).header({ 'X-Message-ID': messageId }).send();
       } catch (error) {
-        // @ts-ignore
-        res.status(500).send({ error: 'Internal Server Error', details: error.message });
+        logger.error('Error processing mail.send.json request', { error, messageId, body: req.body });
+        res.status(500).send({ error: 'Internal Server Error', details: (error as Error).message });
       }
     } else {
       res.status(403).send({
@@ -144,6 +160,7 @@ const RequestHandler = (app: Express, apiAuthenticationKey: any, mailHandler: Ma
 
     if (reqApiKey === apiAuthenticationKey) {
       const messageId = crypto.randomUUID();
+      logger.debug('Received MailPace API request', { body: req.body });
 
       const mailToAdd: Mail = {
         from: {
@@ -164,11 +181,14 @@ const RequestHandler = (app: Express, apiAuthenticationKey: any, mailHandler: Ma
 
       try {
         mailHandler.addMail(mailToAdd, messageId);
+        logger.info(`Mail added via MailPace API`, { messageId, to: req.body.to });
         res.status(200).header({ 'X-Message-ID': messageId }).send();
       } catch (error) {
+        logger.error('Error processing MailPace API request', { error, messageId, body: req.body });
         res.status(500).send({ error: 'Internal Server Error', details: (error as Error).message });
       }
     } else {
+      logger.warn('MailPace API authentication failed');
       res.status(403).send({
         errors: [{
           message: 'Failed authentication',
@@ -185,18 +205,41 @@ const RequestHandler = (app: Express, apiAuthenticationKey: any, mailHandler: Ma
     // @ts-ignore
     validate({ body: jsonSchema.v3MailSend }),
     (req, res) => {
-
       const reqApiKey = req.headers.authorization;
 
       if (reqApiKey === `Bearer ${apiAuthenticationKey}`) {
         const messageId = crypto.randomUUID();
+        logger.debug('Received SendGrid v3 mail/send request', { 
+          messageId,
+          hasAttachments: !!req.body.attachments,
+          attachmentCount: req.body.attachments?.length ?? 0
+        });
 
-        mailHandler.addMail(req.body, messageId);
-
-        res.status(202).header({
-          'X-Message-ID': messageId,
-        }).send();
+        try {
+          mailHandler.addMail(req.body, messageId);
+          logger.info(`Mail added via SendGrid v3 API`, { 
+            messageId, 
+            to: req.body.personalizations?.[0]?.to?.[0]?.email,
+            hasAttachments: !!req.body.attachments
+          });
+          res.status(202).header({
+            'X-Message-ID': messageId,
+          }).send();
+        } catch (error) {
+          logger.error('Error processing SendGrid v3 mail/send request', { 
+            error: (error as Error).message,
+            stack: (error as Error).stack,
+            messageId,
+            hasAttachments: !!req.body.attachments,
+            attachmentCount: req.body.attachments?.length ?? 0
+          });
+          res.status(500).send({ 
+            error: 'Internal Server Error', 
+            details: (error as Error).message 
+          });
+        }
       } else {
+        logger.warn('SendGrid v3 API authentication failed');
         res.status(403).send({
           errors: [{
             message: 'Failed authentication',
@@ -259,11 +302,16 @@ const RequestHandler = (app: Express, apiAuthenticationKey: any, mailHandler: Ma
   // match the given json schema.
   app.use((
       error: Error | ValidationError,
-      _: Request,
+      req: Request,
       response: Response,
       next: NextFunction
   )  => {
     if (error instanceof ValidationError) {
+      logger.warn('Request validation failed', {
+        path: req.path,
+        method: req.method,
+        errors: error.validationErrors.body
+      });
       const responseBody = {
         errors: error.validationErrors.body?.map(validationError => {
           return {
@@ -280,6 +328,26 @@ const RequestHandler = (app: Express, apiAuthenticationKey: any, mailHandler: Ma
     } else {
       next(error);
     }
+  });
+
+  // Global error handler for uncaught errors
+  app.use((
+      error: Error,
+      req: Request,
+      response: Response,
+      // eslint-disable-next-line no-unused-vars
+      _next: NextFunction
+  ) => {
+    logger.error('Unhandled error in request', {
+      path: req.path,
+      method: req.method,
+      error: error.message,
+      stack: error.stack
+    });
+    response.status(500).send({
+      error: 'Internal Server Error',
+      message: error.message
+    });
   });
 };
 
