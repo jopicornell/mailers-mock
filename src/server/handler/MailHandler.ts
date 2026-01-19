@@ -137,56 +137,117 @@ class MailHandler {
   }
 
   addMail(mail: Mail, messageId = crypto.randomUUID()) {
+    try {
+      // Validate mail object has required fields
+      if (!mail) {
+        throw new Error('Mail object is required');
+      }
 
-    this.#mails = [mailWithTimestampAndId(mail), ...this.#mails];
+      // Log attachment info for debugging
+      if (mail.attachments && mail.attachments.length > 0) {
+        logger.debug('Processing mail with attachments', {
+          messageId,
+          attachmentCount: mail.attachments.length,
+          attachmentTypes: mail.attachments.map(a => a.type),
+          attachmentFilenames: mail.attachments.map(a => a.filename),
+          attachmentDispositions: mail.attachments.map(a => a.disposition)
+        });
+      }
 
-    const maxRetentionTime = Date.now() - (this.#mailRetentionDurationInSeconds * 1000);
-    this.#mails = this.#mails.filter(mail => {
-      return Date.parse(mail.datetime?.toString() ?? '').valueOf() >= maxRetentionTime;
-    });
+      const mailWithMeta = mailWithTimestampAndId(mail);
+      this.#mails = [mailWithMeta, ...this.#mails];
 
-    if (process.env.EVENT_DELIVERY_URL) {
-      this.sendDeliveryEvents(mail, messageId);
+      const maxRetentionTime = Date.now() - (this.#mailRetentionDurationInSeconds * 1000);
+      this.#mails = this.#mails.filter(mail => {
+        const mailTime = mail.datetime?.valueOf();
+        if (typeof mailTime === 'number') {
+          return mailTime >= maxRetentionTime;
+        }
+        // If datetime is a string, parse it
+        const parsed = Date.parse(mail.datetime?.toString() ?? '');
+        return !isNaN(parsed) && parsed >= maxRetentionTime;
+      });
+
+      if (process.env.EVENT_DELIVERY_URL) {
+        this.sendDeliveryEvents(mail, messageId);
+      }
+
+      logMemoryUsage(this.#mails);
+    } catch (error) {
+      logger.error('Error adding mail', {
+        messageId,
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+        hasAttachments: !!mail?.attachments,
+        attachmentCount: mail?.attachments?.length ?? 0
+      });
+      throw error;
     }
-
-    logMemoryUsage(this.#mails);
   }
 
   sendDeliveryEvents(mail: Mail, messageId: string) {
-    const datetime = new Date();
-    const deliveredEvents = mail.personalizations?.flatMap((personalization: MailPersonalization) => {
-        return personalization.to?.map(to => {
-          const categories = mail.categories ? mail.categories : [];
-          let event = {
-            email: to.email,
-            timestamp: datetime.getTime(),
-            event: 'delivered',
-            sg_event_id: crypto.randomUUID(),
-            sg_message_id: messageId,
-            category: categories,
-            "smtp-id": crypto.randomUUID(),
-          };
-
-          if (mail.custom_args || personalization.custom_args) {
-            const mailCustomArgs = mail.custom_args ? mail.custom_args : {};
-            const personalizationCustomArgs = personalization.custom_args ? personalization.custom_args : {};
-            //Override mail custom args with personalization custom args
-            const customArgs = Object.assign(mailCustomArgs, personalizationCustomArgs);
-            //Remove reserved keys for both mail and personalization custom args
-            RESERVED_KEYS.forEach(key => delete customArgs[key]);
-
-            event = Object.assign(event, customArgs);
+    try {
+      const datetime = new Date();
+      const deliveredEvents = mail.personalizations?.flatMap((personalization: MailPersonalization) => {
+          if (!personalization?.to) {
+            logger.warn('Personalization missing "to" field', { messageId });
+            return [];
           }
+          return personalization.to.map(to => {
+            if (!to?.email) {
+              logger.warn('Recipient missing email field', { messageId });
+              return null;
+            }
+            const categories = mail.categories ? mail.categories : [];
+            let event = {
+              email: to.email,
+              timestamp: datetime.getTime(),
+              event: 'delivered',
+              sg_event_id: crypto.randomUUID(),
+              sg_message_id: messageId,
+              category: categories,
+              "smtp-id": crypto.randomUUID(),
+            };
 
-          return event;
-        });
+            if (mail.custom_args || personalization.custom_args) {
+              const mailCustomArgs = mail.custom_args ? { ...mail.custom_args } : {};
+              const personalizationCustomArgs = personalization.custom_args ? personalization.custom_args : {};
+              //Override mail custom args with personalization custom args
+              const customArgs = Object.assign(mailCustomArgs, personalizationCustomArgs);
+              //Remove reserved keys for both mail and personalization custom args
+              RESERVED_KEYS.forEach(key => delete customArgs[key]);
+
+              event = Object.assign(event, customArgs);
+            }
+
+            return event;
+          }).filter(Boolean);
+        }) ?? [];
+
+      if (!process.env.EVENT_DELIVERY_URL) {
+        logger.warn('EVENT_DELIVERY_URL is not set, skipping delivery events');
+        return;
+      }
+
+      if (deliveredEvents.length === 0) {
+        logger.warn('No delivery events to send', { messageId });
+        return;
+      }
+
+      axios.post(process.env.EVENT_DELIVERY_URL, deliveredEvents)
+        .then(() => logger.debug(`Delivery events sent successfully to ${process.env.EVENT_DELIVERY_URL}`))
+        .catch((error) => logger.error(`Failed to send delivery events to ${process.env.EVENT_DELIVERY_URL}`, { 
+          error: error.message,
+          messageId 
+        }));
+    } catch (error) {
+      logger.error('Error preparing delivery events', {
+        messageId,
+        error: (error as Error).message,
+        stack: (error as Error).stack
       });
-    if (!process.env.EVENT_DELIVERY_URL) {
-      throw new Error('EVENT_DELIVERY_URL is not set');
+      // Don't throw - delivery events are not critical
     }
-    axios.post(process.env.EVENT_DELIVERY_URL, deliveredEvents)
-      .then(() => logger.debug(`Delivery events sent successfully to ${process.env.EVENT_DELIVERY_URL}`))
-      .catch((error) => logger.debug(`Failed to send delivery events to ${process.env.EVENT_DELIVERY_URL}`, error));
   }
 
   clear(filterCriteria?: { to: string; }) {

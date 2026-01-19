@@ -27,6 +27,7 @@ export interface MailAttachment {
   disposition?: string;
   type?: string;
   content?: string;
+  filename?: string;
 }
 
 export interface MailDisplayContent {

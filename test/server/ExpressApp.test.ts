@@ -368,6 +368,109 @@ describe('App', () => {
 
       expect(response.statusCode).toBe(202);
     });
+
+    test('accepts mail with attachments', async () => {
+      const mailWithAttachments = {
+        ...testMail,
+        attachments: [
+          {
+            content: 'SGVsbG8gV29ybGQh', // base64 encoded "Hello World!"
+            type: 'text/plain',
+            filename: 'hello.txt',
+            disposition: 'attachment'
+          }
+        ]
+      };
+
+      const mailHandlerStub = sinon.createStubInstance(MailHandler);
+      const sut = setupExpressApp(mailHandlerStub, { enabled: false }, 'sonic', rateLimitConfiguration);
+
+      const response = await request(sut)
+        .post('/v3/mail/send')
+        .send(mailWithAttachments)
+        .set('Authorization', 'Bearer sonic');
+
+      expect(response.statusCode).toBe(202);
+      expect(mailHandlerStub.addMail.calledOnce).toBe(true);
+      expect(mailHandlerStub.addMail.firstCall.args[0].attachments).toHaveLength(1);
+    });
+
+    test('accepts mail with inline attachments (content_id)', async () => {
+      const mailWithInlineAttachments = {
+        ...testMail,
+        attachments: [
+          {
+            content: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            type: 'image/png',
+            filename: 'image.png',
+            disposition: 'inline',
+            content_id: 'logo'
+          }
+        ]
+      };
+
+      const mailHandlerStub = sinon.createStubInstance(MailHandler);
+      const sut = setupExpressApp(mailHandlerStub, { enabled: false }, 'sonic', rateLimitConfiguration);
+
+      const response = await request(sut)
+        .post('/v3/mail/send')
+        .send(mailWithInlineAttachments)
+        .set('Authorization', 'Bearer sonic');
+
+      expect(response.statusCode).toBe(202);
+      expect(mailHandlerStub.addMail.calledOnce).toBe(true);
+      const addedMail = mailHandlerStub.addMail.firstCall.args[0];
+      expect(addedMail.attachments?.[0]?.content_id).toBe('logo');
+    });
+
+    test('accepts attachments as null', async () => {
+      const mailWithAttachmentsNull = {
+        ...testMail,
+        attachments: null
+      };
+
+      const mailHandlerStub = sinon.createStubInstance(MailHandler);
+      const sut = setupExpressApp(mailHandlerStub, { enabled: false }, 'sonic', rateLimitConfiguration);
+
+      const response = await request(sut)
+        .post('/v3/mail/send')
+        .send(mailWithAttachmentsNull)
+        .set('Authorization', 'Bearer sonic');
+
+      expect(response.statusCode).toBe(202);
+    });
+
+    test('accepts multiple attachments', async () => {
+      const mailWithMultipleAttachments = {
+        ...testMail,
+        attachments: [
+          {
+            content: 'SGVsbG8gV29ybGQh',
+            type: 'text/plain',
+            filename: 'hello.txt',
+            disposition: 'attachment'
+          },
+          {
+            content: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            type: 'image/png',
+            filename: 'image.png',
+            disposition: 'inline',
+            content_id: 'image1'
+          }
+        ]
+      };
+
+      const mailHandlerStub = sinon.createStubInstance(MailHandler);
+      const sut = setupExpressApp(mailHandlerStub, { enabled: false }, 'sonic', rateLimitConfiguration);
+
+      const response = await request(sut)
+        .post('/v3/mail/send')
+        .send(mailWithMultipleAttachments)
+        .set('Authorization', 'Bearer sonic');
+
+      expect(response.statusCode).toBe(202);
+      expect(mailHandlerStub.addMail.firstCall.args[0].attachments).toHaveLength(2);
+    });
   });
 
   describe('GET /api/mails', () => {

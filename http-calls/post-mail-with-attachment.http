@@ -1,0 +1,38 @@
+POST http://localhost:3000/v3/mail/send
+Authorization: Bearer sendgrid-api-key
+Content-Type: application/json
+
+{
+    "personalizations": [
+        {
+            "to": [{
+                "email": "to@example.com"
+            }]
+        }
+    ],
+    "from": {
+        "email": "from@example.com"
+    },
+    "subject": "Email with attachment",
+    "content": [
+        {
+            "type": "text/html",
+            "value": "<h1>Hello!</h1><p>This email has an attachment.</p><p>And an inline image: <img src=\"cid:logo\" /></p>"
+        }
+    ],
+    "attachments": [
+        {
+            "content": "SGVsbG8gV29ybGQhIFRoaXMgaXMgYSB0ZXN0IGF0dGFjaG1lbnQu",
+            "type": "text/plain",
+            "filename": "hello.txt",
+            "disposition": "attachment"
+        },
+        {
+            "content": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+            "type": "image/png",
+            "filename": "logo.png",
+            "disposition": "inline",
+            "content_id": "logo"
+        }
+    ]
+}
