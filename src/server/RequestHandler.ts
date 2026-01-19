@@ -298,6 +298,72 @@ const RequestHandler = (app: Express, apiAuthenticationKey: any, mailHandler: Ma
     res.sendStatus(202);
   });
 
+  app.get('/zero_bounce', (req, res) => {
+    const email = req.query.email?.toString().toLowerCase() || '';
+
+    let response: any = {
+      address: email,
+      status: 'valid',
+      sub_status: '',
+      free_email: false,
+      did_you_mean: '',
+      account: '',
+      domain: email.split('@')[1] || '',
+      domain_age_days: 0,
+      free_email_provider: false,
+      mx_found: true,
+      mx_record: '',
+      smtp_provider: '',
+      firstname: '',
+      lastname: '',
+      gender: '',
+      country: '',
+      region: '',
+      city: '',
+      zipcode: '',
+      processed_at: new Date().toISOString()
+    };
+
+    // Check if email contains "invalid" - return invalid status
+    if (email.includes('invalid')) {
+      response.status = 'invalid';
+      response.sub_status = '';
+    }
+    // Check for temporary/toxic email indicators
+    else if (email.includes('disposable')) {
+      response.status = 'invalid';
+      response.sub_status = 'disposable';
+    } else if (email.includes('toxic')) {
+      response.status = 'invalid';
+      response.sub_status = 'toxic';
+    }
+    // Check for other error conditions
+    else if (email.includes('smtp_connection')) {
+      response.status = 'invalid';
+      response.sub_status = 'failed_smtp_connection';
+    } else if (email.includes('syntax_check')) {
+      response.status = 'invalid';
+      response.sub_status = 'failed_syntax_check';
+    } else if (email.includes('no_response')) {
+      response.status = 'invalid';
+      response.sub_status = 'mail_server_did_not_respond';
+    } else if (email.includes('temp_error')) {
+      response.status = 'invalid';
+      response.sub_status = 'mail_server_temporary_error';
+    } else if (email.includes('timeout')) {
+      response.status = 'invalid';
+      response.sub_status = 'timeout_exceeded';
+    } else if (email.includes('global_suppression')) {
+      response.status = 'invalid';
+      response.sub_status = 'global_suppression';
+    } else if (email.includes('quota_exceeded')) {
+      response.status = 'invalid';
+      response.sub_status = 'mailbox_quota_exceeded';
+    }
+
+    res.json(response);
+  });
+  
   // Error handler that returns a 400 status code if the request body does not
   // match the given json schema.
   app.use((
