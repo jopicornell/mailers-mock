@@ -57,14 +57,14 @@ const mailSentTo = (mail: Mail, to?: string) => {
 
   if (Array.isArray(mail.personalizations)) {
 
-    const matcherFn = to &&to.startsWith('%') && to.endsWith('%')
-      ? (string: string) => string.toLowerCase().includes(to.substring(1, to.length -1).toLowerCase())
-      : (string: string) => string.toLowerCase() == to?.toLowerCase();
+    const matcherFn = to && to.startsWith('%') && to.endsWith('%')
+      ? (value: unknown) => String(value).toLowerCase().includes(to.substring(1, to.length - 1).toLowerCase())
+      : (value: unknown) => String(value).toLowerCase() === to?.toLowerCase();
 
     return mail
       .personalizations
       .flatMap(personalization => personalization.to)
-      .some(to => matcherFn(to?.email ?? ''));
+      .some(recipient => matcherFn(recipient?.email ?? ''));
   } else {
     return false;
   }
@@ -72,7 +72,7 @@ const mailSentTo = (mail: Mail, to?: string) => {
 
 const mailContainSubject = (mail: Mail, subject?: string) => {
 
-  const actualSubject = mail.subject;
+  const actualSubject = String(mail.subject ?? '');
 
   if (subject && subject.startsWith('%') && subject.endsWith('%')) {
     const searchSubject = subject.substring(1, subject.length - 1);
