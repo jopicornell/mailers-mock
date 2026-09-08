@@ -1,7 +1,7 @@
-FROM node:24-alpine AS node
+FROM oven/bun:latest AS bun
 
 # Build stage
-FROM node AS builder
+FROM bun AS builder
 LABEL author="Siyavash Habashi (ghashange) / Ronald Dehuysser (Bringme)"
 
 ENV DOCKER_BUILD="true"
@@ -10,30 +10,28 @@ ENV DOCKER_BUILD="true"
 # NOTE: if you need to change this, change the $CERT_WEBROOT_PATH env
 WORKDIR /app
 
-# RUN apk add --no-cache python3 make g++
-
 ######################################################################################
 # Add your own Dockerfile entries here
 ######################################################################################
-COPY package*.json ./
-RUN npm ci
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 COPY . .
-RUN npm run build
+RUN bun run build
+FROM debian:stable-slim
 
+COPY --from=oven/bun:latest /usr/local/bin/bun /usr/local/bin/bun
 
-FROM node
-
-RUN apk add --no-cache tini
-ENTRYPOINT ["/sbin/tini", "--"]
+RUN apt-get update && apt-get install -y --no-install-recommends tini \
+    && rm -rf /var/lib/apt/lists/*
+ENTRYPOINT ["/usr/bin/tini", "--"]
 
 WORKDIR /usr/src/server
-# Copy package.json and package-lock.json
-COPY package*.json ./
 # Install only production dependencies
-RUN npm i --production
-# Copy transpiled js from builder stage into the final image
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile --production
+# Copy the UI build output
 COPY --from=builder /app/dist ./dist
-# Copy src/server into final image
+# The bun runtime executes the TypeScript server sources directly
 COPY src/server ./src/server
 
 # port 80 is mandatory for webroot challenge
@@ -49,4 +47,4 @@ ENV NODE_ENV=production
 ENV API_KEY=sendgrid-api-key
 
 # the command which starts your express server.
-CMD ["npm", "run", "start"]
+CMD ["bun", "run", "./src/server/Server.ts"]
